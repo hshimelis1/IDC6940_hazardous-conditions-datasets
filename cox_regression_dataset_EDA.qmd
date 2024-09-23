@@ -1,0 +1,148 @@
+---
+title: "EDA of two datasets for cox regression"
+author: "Hermela Shimelis"
+format: html
+editor: visual
+date: last-modified
+date-format: long
+---
+
+## Exploratory data analysis
+
+## I. **Framingham heart study dataset**
+
+The Framingham Heart Study is a longituidinal prospective study of the etiology of cardiovascular disease among subjects in the community of Framingham, Massachusetts.
+
+```{r echo=F, message=FALSE}
+# load library
+library(readr)
+library(dplyr)
+```
+
+```{r}
+
+# Import data
+df <- read_csv("~/git_directory/IDC6940_hazardous-conditions/Datasets/framingham.csv")
+
+```
+
+```{r}
+# view data
+head(df,10)
+
+
+# view data structure 
+str(df) # all variables are numerical
+
+# check missing data
+sum(is.na(df)) # 645 Nas data
+
+```
+
+Evaluate continuous variables
+
+```{r}
+hist(df$age)
+hist(df$cigsPerDay)
+hist(df$totChol)
+hist(df$sysBP)
+hist(df$diaBP)
+hist(df$BMI)
+hist(df$heartRate)
+hist(df$glucose)
+
+```
+
+## II. NCCTG lung cancer data: R dataset from "Survival" package
+
+The dataset Survival in patients with advanced lung cancer from the North Central Cancer Treatment Group. Performance scores rate how well the patient can perform usual daily activities.
+
+#### Column descriptions
+
+|            |                                                                                                                                                                                                    |
+|:---------------|:-------------------------------------------------------|
+| inst:      | Institution code                                                                                                                                                                                   |
+| time:      | Survival time in days                                                                                                                                                                              |
+| status:    | censoring status 1=censored, 2=dead                                                                                                                                                                |
+| age:       | Age in years                                                                                                                                                                                       |
+| sex:       | Male=1 Female=2                                                                                                                                                                                    |
+| ph.ecog:   | ECOG performance score as rated by the physician. 0=asymptomatic, 1= symptomatic but completely ambulatory, 2= in bed \<50% of the day, 3= in bed \> 50% of the day but not bedbound, 4 = bedbound |
+| ph.karno:  | Karnofsky performance score (bad=0-good=100) rated by physician                                                                                                                                    |
+| pat.karno: | Karnofsky performance score as rated by patient                                                                                                                                                    |
+| meal.cal:  | Calories consumed at meals                                                                                                                                                                         |
+| wt.loss:   | Weight loss in last six months (pounds)                                                                                                                                                            |
+|            |                                                                                                                                                                                                    |
+
+```{r}
+# Vetrans' admistration lung cancer study
+library(survival)
+
+data(cancer, package="survival")
+
+head(cancer)
+```
+
+```{r}
+
+# view data structure 
+str(cancer) # all variables are numerical
+
+# check missing data
+sum(is.na(cancer)) # 67 Nas data
+```
+
+```{r}
+library(dplyr)
+unique(cancer$inst)
+n_distinct(cancer$inst) # the data was collected from 18 institutions, and an unknown institution.
+
+```
+
+\- Examine hwo many patients were sampled from each institution
+
+```{r}
+
+# Number of patients from each institution:
+ct <- cancer%>%group_by(as.factor(inst))%>%summarise(count = n())
+print(ct,20)
+
+# exclude unknown institution
+cancer <- cancer%>%filter(!is.na(inst))
+```
+
+Insight: At least two patients were included from each institution. One institution with a single patient is excluded from the data since the institution is unknown.
+
+Evaluate continious variables
+
+```{r}
+hist(cancer$time)
+hist(cancer$age)
+hist(cancer$ph.karno)
+hist(cancer$pat.karno)
+hist(cancer$meal.cal)
+hist(cancer$wt.loss)
+
+
+```
+
+Insight: most of the variables are fairly normally distributed. Meal calorie appear to be right skewed.
+
+```{r}
+status <- cancer%>%group_by(status)%>%summarise(count = n())
+print(status)
+
+sex <- cancer%>%group_by(sex)%>%summarise(count = n())
+print(sex)
+
+phecog <- cancer%>%group_by(ph.ecog)%>%summarise(count = n())
+print(phecog)
+
+```
+
+Insight: ph.ecog variable has only 4 category, one of which is represented by only one individual. Remove two rows, one with NA category and another with single observation.
+
+```{r}
+# Remove a row with category 3 and NA
+cancer <- cancer%>%filter(!is.na(ph.ecog))
+cancer <- cancer%>%filter(ph.ecog != 3)
+```
